@@ -48,8 +48,10 @@ Así ese usuario queda como **admin** en la app.
 
 - **Local:** copia `.env.example` a `.env` y rellena con la URL y la anon key de tu proyecto.
 - **Vercel:** en el proyecto de Vercel, **Settings > Environment Variables** y agrega:
-  - `VITE_SUPABASE_URL` = Project URL de Supabase
-  - `VITE_SUPABASE_ANON_KEY` = anon public key de Supabase
+  - `VITE_SUPABASE_URL` = (tu Project URL de Supabase)
+  - `VITE_SUPABASE_ANON_KEY` = (tu anon public key de Supabase)
+
+**Importante:** No subas las claves al repositorio. Usa solo `.env` en local (ya está en `.gitignore`) y las variables en el panel de Vercel.
 
 Con eso la app (local y en Vercel) usará el mismo proyecto Supabase.
 

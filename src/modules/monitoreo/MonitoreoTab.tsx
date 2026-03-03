@@ -1,6 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../auth/AuthContext";
 import { formatDecimal } from "../productos/utils";
+import { AplicacionModal } from "./AplicacionModal";
+import { CosechaModal } from "./CosechaModal";
+import { EvaluacionModal } from "./EvaluacionModal";
+import { RteModal } from "./RteModal";
+import { SiembraModal } from "./SiembraModal";
 
 interface MonitoreoRow {
   id: string;
@@ -23,6 +29,7 @@ interface MonitoreoRow {
 }
 
 export function MonitoreoTab() {
+  const { perfil } = useAuth();
   const [rows, setRows] = useState<MonitoreoRow[]>([]);
   const [clientes, setClientes] = useState<{ id: string; nombre: string }[]>([]);
   const [parcelas, setParcelas] = useState<{ id: string; nombre_parcela: string; id_cliente: string; area_real_ha: number | null }[]>([]);
@@ -40,12 +47,29 @@ export function MonitoreoTab() {
   });
   const [filterCliente, setFilterCliente] = useState("");
   const [filterParcela, setFilterParcela] = useState("");
+  const [siembraModal, setSiembraModal] = useState<{ monitoreo: MonitoreoRow; siembraId: string } | null>(null);
+  const [aplicacionModal, setAplicacionModal] = useState<{ aplicacionId: string; monitoreo: MonitoreoRow; areaHa: number | null } | null>(null);
+  const [aplicacionesList, setAplicacionesList] = useState<{ id: string; fecha_aplicacion: string | null }[]>([]);
+  const [cosechaModal, setCosechaModal] = useState<{ cosechaId: string; monitoreo: MonitoreoRow } | null>(null);
+  const [rteModal, setRteModal] = useState<{ rteId: string; monitoreo: MonitoreoRow } | null>(null);
+  const [evaluacionModal, setEvaluacionModal] = useState<{ evaluacionId: string; monitoreo: MonitoreoRow } | null>(null);
+  const [evaluacionesList, setEvaluacionesList] = useState<{ id: string; fecha_evaluacion: string }[]>([]);
 
   const loadMonitoreos = async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from("monitoreos")
       .select("id, id_cliente, id_parcela, id_zafra, hectares, costo_estimado, productividad_estimada, tiene_siembra, tiene_aplicaciones, tiene_evaluaciones, tiene_cosecha, tiene_rte, concluido, created_at")
       .order("created_at", { ascending: false });
+    if (perfil?.perfil_acceso === "rtv") {
+      const { data: clientesRtv } = await supabase.from("clientes").select("id").eq("id_vendedor", perfil.id);
+      const ids = (clientesRtv ?? []).map((c: { id: string }) => c.id);
+      if (ids.length === 0) {
+        setRows([]);
+        return;
+      }
+      q = q.in("id_cliente", ids);
+    }
+    const { data, error } = await q;
     if (error || !data) return;
     const cIds = [...new Set((data as any[]).map((d) => d.id_cliente))];
     const pIds = [...new Set((data as any[]).map((d) => d.id_parcela))];
@@ -79,8 +103,12 @@ export function MonitoreoTab() {
     const load = async () => {
       setLoading(true);
       await loadMonitoreos();
+      let clientesQ = supabase.from("clientes").select("id, nombre").eq("estado", "activo");
+      if (perfil?.perfil_acceso === "rtv") {
+        clientesQ = clientesQ.eq("id_vendedor", perfil.id);
+      }
       const [c, p, z] = await Promise.all([
-        supabase.from("clientes").select("id, nombre").eq("estado", "activo"),
+        clientesQ,
         supabase.from("parcelas").select("id, nombre_parcela, id_cliente, area_real_ha").eq("estado", "activo"),
         supabase.from("zafras").select("id, nombre_zafra").eq("estado", "activo"),
       ]);
@@ -90,12 +118,44 @@ export function MonitoreoTab() {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [perfil?.id, perfil?.perfil_acceso]);
 
   const parcelasByCliente = useMemo(() => {
     if (!form.id_cliente) return parcelas;
     return parcelas.filter((p) => p.id_cliente === form.id_cliente);
   }, [parcelas, form.id_cliente]);
+
+  useEffect(() => {
+    if (!showDetail?.id || !showDetail.tiene_aplicaciones) {
+      setAplicacionesList([]);
+      return;
+    }
+    const load = async () => {
+      const { data } = await supabase
+        .from("aplicaciones")
+        .select("id, fecha_aplicacion")
+        .eq("id_monitoreo", showDetail.id)
+        .order("fecha_aplicacion", { ascending: false });
+      setAplicacionesList((data as any[]) ?? []);
+    };
+    load();
+  }, [showDetail?.id, showDetail?.tiene_aplicaciones]);
+
+  useEffect(() => {
+    if (!showDetail?.id || !showDetail.tiene_evaluaciones) {
+      setEvaluacionesList([]);
+      return;
+    }
+    const load = async () => {
+      const { data } = await supabase
+        .from("evaluaciones")
+        .select("id, fecha_evaluacion")
+        .eq("id_monitoreo", showDetail.id)
+        .order("fecha_evaluacion", { ascending: false });
+      setEvaluacionesList((data as any[]) ?? []);
+    };
+    load();
+  }, [showDetail?.id, showDetail?.tiene_evaluaciones]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -144,41 +204,79 @@ export function MonitoreoTab() {
       await supabase.from("monitoreos").update({ tiene_siembra: true }).eq("id", m.id);
       await loadMonitoreos();
       setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_siembra: true } : prev));
+      setSiembraModal({ monitoreo: m, siembraId: (data as any).id });
     }
+  };
+
+  const handleVerSiembra = async (m: MonitoreoRow) => {
+    const { data } = await supabase.from("siembra").select("id").eq("id_monitoreo", m.id).single();
+    if (data) setSiembraModal({ monitoreo: m, siembraId: (data as any).id });
   };
 
   const handleIniciarAplicacion = async (m: MonitoreoRow) => {
-    await supabase.from("aplicaciones").insert({ id_monitoreo: m.id });
-    const { count } = await supabase.from("aplicaciones").select("id", { count: "exact", head: true }).eq("id_monitoreo", m.id);
-    if ((count ?? 0) > 0) {
+    const { data } = await supabase.from("aplicaciones").insert({ id_monitoreo: m.id }).select("id").single();
+    if (data) {
       await supabase.from("monitoreos").update({ tiene_aplicaciones: true }).eq("id", m.id);
       await loadMonitoreos();
       setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_aplicaciones: true } : prev));
+      setAplicacionModal({
+        aplicacionId: (data as any).id,
+        monitoreo: m,
+        areaHa: parcelas.find((p) => p.id === m.id_parcela)?.area_real_ha ?? m.hectares ?? null,
+      });
     }
+  };
+
+  const handleVerAplicacion = (aplicacionId: string, m: MonitoreoRow) => {
+    setAplicacionModal({
+      aplicacionId,
+      monitoreo: m,
+      areaHa: parcelas.find((p) => p.id === m.id_parcela)?.area_real_ha ?? m.hectares ?? null,
+    });
   };
 
   const handleIniciarEvaluacion = async (m: MonitoreoRow) => {
-    await supabase.from("evaluaciones").insert({ id_monitoreo: m.id, fecha_evaluacion: new Date().toISOString().slice(0, 10) });
-    const { count } = await supabase.from("evaluaciones").select("id", { count: "exact", head: true }).eq("id_monitoreo", m.id);
-    if ((count ?? 0) > 0) {
+    const { data } = await supabase.from("evaluaciones").insert({ id_monitoreo: m.id, fecha_evaluacion: new Date().toISOString().slice(0, 10) }).select("id").single();
+    if (data) {
       await supabase.from("monitoreos").update({ tiene_evaluaciones: true }).eq("id", m.id);
       await loadMonitoreos();
       setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_evaluaciones: true } : prev));
+      setEvaluacionModal({ evaluacionId: (data as any).id, monitoreo: m });
     }
   };
 
+  const handleVerEvaluacion = (evaluacionId: string, m: MonitoreoRow) => {
+    setEvaluacionModal({ evaluacionId, monitoreo: m });
+  };
+
   const handleIniciarCosecha = async (m: MonitoreoRow) => {
-    await supabase.from("cosechas").insert({ id_monitoreo: m.id });
-    await supabase.from("monitoreos").update({ tiene_cosecha: true }).eq("id", m.id);
-    await loadMonitoreos();
-    setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_cosecha: true } : prev));
+    const { data } = await supabase.from("cosechas").insert({ id_monitoreo: m.id }).select("id").single();
+    if (data) {
+      await supabase.from("monitoreos").update({ tiene_cosecha: true }).eq("id", m.id);
+      await loadMonitoreos();
+      setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_cosecha: true } : prev));
+      setCosechaModal({ cosechaId: (data as any).id, monitoreo: m });
+    }
+  };
+
+  const handleVerCosecha = async (m: MonitoreoRow) => {
+    const { data } = await supabase.from("cosechas").select("id").eq("id_monitoreo", m.id).single();
+    if (data) setCosechaModal({ cosechaId: (data as any).id, monitoreo: m });
   };
 
   const handleIniciarRte = async (m: MonitoreoRow) => {
-    await supabase.from("rte").insert({ id_monitoreo: m.id, costo_total: 0, ingreso_total: 0, resultado_tecnico: 0 });
-    await supabase.from("monitoreos").update({ tiene_rte: true }).eq("id", m.id);
-    await loadMonitoreos();
-    setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_rte: true } : prev));
+    const { data } = await supabase.from("rte").insert({ id_monitoreo: m.id, costo_total: 0, ingreso_total: 0, resultado_tecnico: 0 }).select("id").single();
+    if (data) {
+      await supabase.from("monitoreos").update({ tiene_rte: true }).eq("id", m.id);
+      await loadMonitoreos();
+      setShowDetail((prev) => (prev?.id === m.id ? { ...prev, tiene_rte: true } : prev));
+      setRteModal({ rteId: (data as any).id, monitoreo: m });
+    }
+  };
+
+  const handleVerRte = async (m: MonitoreoRow) => {
+    const { data } = await supabase.from("rte").select("id").eq("id_monitoreo", m.id).single();
+    if (data) setRteModal({ rteId: (data as any).id, monitoreo: m });
   };
 
   const handleConcluir = async (m: MonitoreoRow) => {
@@ -392,9 +490,13 @@ export function MonitoreoTab() {
                     <div className="card border-secondary">
                       <div className="card-body py-2 d-flex justify-content-between align-items-center">
                         <span><strong>Siembra</strong> {showDetail.tiene_siembra ? "– Registrada" : ""}</span>
-                        {!showDetail.tiene_siembra && (
+                        {!showDetail.tiene_siembra ? (
                           <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarSiembra(showDetail)}>
                             Iniciar Siembra
+                          </button>
+                        ) : (
+                          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleVerSiembra(showDetail)}>
+                            Ver detalle / Editar
                           </button>
                         )}
                       </div>
@@ -404,11 +506,25 @@ export function MonitoreoTab() {
                 <div className="row mb-2">
                   <div className="col">
                     <div className="card border-secondary">
-                      <div className="card-body py-2 d-flex justify-content-between align-items-center">
-                        <span><strong>Aplicaciones</strong> {showDetail.tiene_aplicaciones ? "– Con registros" : ""}</span>
-                        <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarAplicacion(showDetail)}>
-                          Nueva aplicación
-                        </button>
+                      <div className="card-body py-2">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span><strong>Aplicaciones</strong> {showDetail.tiene_aplicaciones ? "– Con registros" : ""}</span>
+                          <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarAplicacion(showDetail)}>
+                            Nueva aplicación
+                          </button>
+                        </div>
+                        {showDetail.tiene_aplicaciones && aplicacionesList.length > 0 && (
+                          <ul className="list-unstyled mb-0 mt-1 small">
+                            {aplicacionesList.map((a) => (
+                              <li key={a.id} className="d-flex justify-content-between align-items-center">
+                                <span>Fecha: {a.fecha_aplicacion ?? "-"}</span>
+                                <button type="button" className="btn btn-xs btn-outline-primary" onClick={() => handleVerAplicacion(a.id, showDetail)}>
+                                  Ver detalle
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -416,11 +532,25 @@ export function MonitoreoTab() {
                 <div className="row mb-2">
                   <div className="col">
                     <div className="card border-secondary">
-                      <div className="card-body py-2 d-flex justify-content-between align-items-center">
-                        <span><strong>Evaluaciones</strong> {showDetail.tiene_evaluaciones ? "– Con registros" : ""}</span>
-                        <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarEvaluacion(showDetail)}>
-                          Nueva evaluación
-                        </button>
+                      <div className="card-body py-2">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span><strong>Evaluaciones</strong> {showDetail.tiene_evaluaciones ? "– Con registros" : ""}</span>
+                          <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarEvaluacion(showDetail)}>
+                            Nueva evaluación
+                          </button>
+                        </div>
+                        {showDetail.tiene_evaluaciones && evaluacionesList.length > 0 && (
+                          <ul className="list-unstyled mb-0 mt-1 small">
+                            {evaluacionesList.map((e) => (
+                              <li key={e.id} className="d-flex justify-content-between align-items-center">
+                                <span>Fecha: {e.fecha_evaluacion}</span>
+                                <button type="button" className="btn btn-xs btn-outline-primary" onClick={() => handleVerEvaluacion(e.id, showDetail)}>
+                                  Ver detalle
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -430,11 +560,15 @@ export function MonitoreoTab() {
                     <div className="card border-secondary">
                       <div className="card-body py-2 d-flex justify-content-between align-items-center">
                         <span><strong>Cosecha</strong> {showDetail.tiene_cosecha ? "– Registrada" : ""}</span>
-                        {!showDetail.tiene_cosecha && showDetail.tiene_siembra && (showDetail.tiene_aplicaciones || showDetail.tiene_evaluaciones) && (
+                        {!showDetail.tiene_cosecha && showDetail.tiene_siembra && (showDetail.tiene_aplicaciones || showDetail.tiene_evaluaciones) ? (
                           <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarCosecha(showDetail)}>
                             Iniciar Cosecha
                           </button>
-                        )}
+                        ) : showDetail.tiene_cosecha ? (
+                          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleVerCosecha(showDetail)}>
+                            Ver detalle / Editar
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -444,11 +578,15 @@ export function MonitoreoTab() {
                     <div className="card border-secondary">
                       <div className="card-body py-2 d-flex justify-content-between align-items-center">
                         <span><strong>RTE</strong> {showDetail.tiene_rte ? "– Registrado" : ""}</span>
-                        {!showDetail.tiene_rte && showDetail.tiene_cosecha && (
+                        {!showDetail.tiene_rte && showDetail.tiene_cosecha ? (
                           <button type="button" className="btn btn-sm btn-success" onClick={() => handleIniciarRte(showDetail)}>
                             Iniciar RTE
                           </button>
-                        )}
+                        ) : showDetail.tiene_rte ? (
+                          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleVerRte(showDetail)}>
+                            Ver detalle / Editar
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -469,6 +607,61 @@ export function MonitoreoTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {siembraModal && (
+        <SiembraModal
+          monitoreo={siembraModal.monitoreo}
+          siembraId={siembraModal.siembraId}
+          areaHa={parcelas.find((p) => p.id === siembraModal.monitoreo.id_parcela)?.area_real_ha ?? siembraModal.monitoreo.hectares ?? null}
+          onClose={() => setSiembraModal(null)}
+          onSaved={() => loadMonitoreos()}
+        />
+      )}
+
+      {aplicacionModal && (
+        <AplicacionModal
+          aplicacionId={aplicacionModal.aplicacionId}
+          monitoreo={aplicacionModal.monitoreo}
+          areaHa={aplicacionModal.areaHa}
+          onClose={() => setAplicacionModal(null)}
+          onSaved={() => {
+            loadMonitoreos();
+            const monId = aplicacionModal.monitoreo.id;
+            supabase.from("aplicaciones").select("id, fecha_aplicacion").eq("id_monitoreo", monId).order("fecha_aplicacion", { ascending: false }).then(({ data }) => setAplicacionesList((data as any[]) ?? []));
+          }}
+        />
+      )}
+
+      {cosechaModal && (
+        <CosechaModal
+          cosechaId={cosechaModal.cosechaId}
+          monitoreo={cosechaModal.monitoreo}
+          onClose={() => setCosechaModal(null)}
+          onSaved={() => { loadMonitoreos(); setCosechaModal(null); }}
+        />
+      )}
+
+      {rteModal && (
+        <RteModal
+          rteId={rteModal.rteId}
+          monitoreo={rteModal.monitoreo}
+          onClose={() => setRteModal(null)}
+          onSaved={() => { loadMonitoreos(); setRteModal(null); }}
+        />
+      )}
+
+      {evaluacionModal && (
+        <EvaluacionModal
+          evaluacionId={evaluacionModal.evaluacionId}
+          monitoreo={evaluacionModal.monitoreo}
+          onClose={() => setEvaluacionModal(null)}
+          onSaved={() => {
+            loadMonitoreos();
+            const monId = evaluacionModal.monitoreo.id;
+            supabase.from("evaluaciones").select("id, fecha_evaluacion").eq("id_monitoreo", monId).order("fecha_evaluacion", { ascending: false }).then(({ data }) => setEvaluacionesList((data as any[]) ?? []));
+          }}
+        />
       )}
     </div>
   );

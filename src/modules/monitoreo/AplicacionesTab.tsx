@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../auth/AuthContext";
 import { formatDecimal } from "../productos/utils";
+import { AplicacionModal } from "./AplicacionModal";
+import { generarPdfAplicacion } from "./pdfAplicacion";
 
 interface AplicacionRow {
   id: string;
+  id_monitoreo: string;
+  id_cliente: string;
   fecha_aplicacion: string | null;
   costo_total: number | null;
   costo_ha: number | null;
@@ -13,15 +18,26 @@ interface AplicacionRow {
 }
 
 export function AplicacionesTab() {
+  const { perfil } = useAuth();
   const [rows, setRows] = useState<AplicacionRow[]>([]);
   const [clientes, setClientes] = useState<{ id: string; nombre: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCliente, setFilterCliente] = useState("");
+  const [modalAplicacionId, setModalAplicacionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
+  const loadRows = async () => {
+    setLoading(true);
+    let rtvClientIds: string[] = [];
+    if (perfil?.perfil_acceso === "rtv") {
+      const { data: clientesRtv } = await supabase.from("clientes").select("id").eq("id_vendedor", perfil.id);
+      rtvClientIds = (clientesRtv ?? []).map((c: { id: string }) => c.id);
+      if (rtvClientIds.length === 0) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+    }
+    const { data, error } = await supabase
         .from("aplicaciones")
         .select("id, fecha_aplicacion, costo_total, costo_ha, id_monitoreo")
         .order("created_at", { ascending: false });
@@ -45,31 +61,35 @@ export function AplicacionesTab() {
       const pMap: Record<string, string> = Object.fromEntries((pRes.data as any[])?.map((x) => [x.id, x.nombre_parcela]) ?? []);
       const zMap: Record<string, string> = Object.fromEntries((zRes.data as any[])?.map((x) => [x.id, x.nombre_zafra]) ?? []);
       const monMap: Record<string, any> = Object.fromEntries((mon as any[]).map((m) => [m.id, m]));
-      setRows(
-        (data as any[]).map((d) => {
-          const m = monMap[d.id_monitoreo];
-          return {
-            id: d.id,
-            fecha_aplicacion: d.fecha_aplicacion,
-            costo_total: d.costo_total,
-            costo_ha: d.costo_ha,
-            cliente_nombre: m ? cMap[m.id_cliente] ?? "" : "",
-            parcela_nombre: m ? pMap[m.id_parcela] ?? "" : "",
-            zafra_nombre: m ? zMap[m.id_zafra] ?? "" : "",
-          };
-        })
-      );
-      if (cRes.data) setClientes(cRes.data as any);
-      setLoading(false);
-    };
-    load();
-  }, []);
+    let list = (data as any[]).map((d) => {
+      const m = monMap[d.id_monitoreo];
+      return {
+        id: d.id,
+        id_monitoreo: d.id_monitoreo,
+        id_cliente: m?.id_cliente ?? "",
+        fecha_aplicacion: d.fecha_aplicacion,
+        costo_total: d.costo_total,
+        costo_ha: d.costo_ha,
+        cliente_nombre: m ? cMap[m.id_cliente] ?? "" : "",
+        parcela_nombre: m ? pMap[m.id_parcela] ?? "" : "",
+        zafra_nombre: m ? zMap[m.id_zafra] ?? "" : "",
+      };
+    });
+    if (rtvClientIds.length > 0) {
+      list = list.filter((r) => r.id_cliente && rtvClientIds.includes(r.id_cliente));
+      setClientes(((cRes.data as any[]) ?? []).filter((c: { id: string }) => rtvClientIds.includes(c.id)));
+    } else if (cRes.data) setClientes(cRes.data as any);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadRows();
+  }, [perfil?.id, perfil?.perfil_acceso]);
 
   const filtered = useMemo(() => {
     if (!filterCliente) return rows;
-    const name = clientes.find((c) => c.id === filterCliente)?.nombre ?? "";
-    return rows.filter((r) => r.cliente_nombre === name);
-  }, [rows, filterCliente, clientes]);
+    return rows.filter((r) => r.id_cliente === filterCliente);
+  }, [rows, filterCliente]);
 
   if (loading) return <span>Cargando aplicaciones...</span>;
 
@@ -116,10 +136,10 @@ export function AplicacionesTab() {
                 <td>{formatDecimal(r.costo_total)}</td>
                 <td>{formatDecimal(r.costo_ha)}</td>
                 <td>
-                  <button type="button" className="btn btn-xs btn-outline-secondary">
+                  <button type="button" className="btn btn-xs btn-outline-primary mr-1" onClick={() => setModalAplicacionId(r.id)}>
                     Ver detalle
                   </button>
-                  <button type="button" className="btn btn-xs btn-outline-secondary ml-1">
+                  <button type="button" className="btn btn-xs btn-outline-secondary" onClick={() => generarPdfAplicacion(supabase, r.id)}>
                     PDF
                   </button>
                 </td>
@@ -128,6 +148,16 @@ export function AplicacionesTab() {
           </tbody>
         </table>
       </div>
+
+      {modalAplicacionId && (
+        <AplicacionModal
+          aplicacionId={modalAplicacionId}
+          monitoreo={null}
+          areaHa={null}
+          onClose={() => setModalAplicacionId(null)}
+          onSaved={() => { loadRows(); setModalAplicacionId(null); }}
+        />
+      )}
     </div>
   );
 }

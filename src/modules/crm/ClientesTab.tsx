@@ -75,10 +75,14 @@ export function ClientesTab() {
   const [filterVendedor, setFilterVendedor] = useState("");
 
   const loadClientes = async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from("clientes")
       .select("id, nombre, email, estado, created_at, id_vendedor")
       .order("created_at", { ascending: false });
+    if (perfil?.perfil_acceso === "rtv") {
+      q = q.eq("id_vendedor", perfil.id);
+    }
+    const { data, error } = await q;
     if (!error && data) {
       const vendIds = [...new Set((data as any[]).map((d) => d.id_vendedor).filter(Boolean))];
       let vendMap: Record<string, string> = {};

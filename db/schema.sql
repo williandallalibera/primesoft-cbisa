@@ -349,8 +349,8 @@ on conflict (id_cultura, codigo) do nothing;
 
 -- Etapas fenológicas Maíz
 insert into etapas_fenologicas (id_cultura, codigo, descripcion)
-select maiz.id, x.codigo, x.descripcion
-from maiz,
+select c.id, x.codigo, x.descripcion
+from (select id from culturas where codigo = 'maiz') c,
   (values
     ('VE', 'Emergencia'),
     ('V2', 'V2'),
@@ -369,8 +369,8 @@ on conflict (id_cultura, codigo) do nothing;
 
 -- Etapas fenológicas Trigo
 insert into etapas_fenologicas (id_cultura, codigo, descripcion)
-select trigo.id, x.codigo, x.descripcion
-from trigo,
+select c.id, x.codigo, x.descripcion
+from (select id from culturas where codigo = 'trigo') c,
   (values
     ('E', 'Emergencia'),
     ('M', 'Macollaje'),

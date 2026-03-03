@@ -79,12 +79,16 @@ export function PropuestasTab() {
   const [dosisHa, setDosisHa] = useState("");
 
   const loadPropuestas = async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from("propuestas")
       .select(
         "id, sku, fecha, total_general, total_voucher, created_at, id_cliente, id_tipo_propuesta, id_estado_propuesta, tipo_propuesta(codigo), estado_propuesta(codigo), clientes(nombre)"
       )
       .order("created_at", { ascending: false });
+    if (perfil?.perfil_acceso === "rtv") {
+      q = q.eq("id_vendedor", perfil.id);
+    }
+    const { data, error } = await q;
     if (!error && data) {
       setRows(
         (data as any[]).map((d) => ({
