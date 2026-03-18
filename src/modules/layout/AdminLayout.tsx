@@ -77,7 +77,8 @@ export function AdminLayout() {
     ? menuItems.filter((item) => item.roles.includes(perfil.perfil_acceso))
     : menuItems;
 
-  if (!loading && !session && !perfil) {
+  // Só redireciona para login quando não há sessão (perfil pode vir um pouco depois)
+  if (!loading && !session) {
     return <Navigate to="/login" replace />;
   }
 

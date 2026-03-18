@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function RoleRoute({ allowed, children }: Props) {
-  const { perfil, loading } = useAuth();
+  const { perfil, loading, session } = useAuth();
   const [, forceUpdate] = useState({});
 
   // Verifica se o modo de revisão está ativo via localStorage ou flag temporária
@@ -18,7 +18,8 @@ export function RoleRoute({ allowed, children }: Props) {
 
   console.log("RoleRoute Check:", { perfil, allowed, loading, isForced, isPreview: perfil?.id === "preview-id" });
 
-  if (loading && !isForced) {
+  // Loading geral ou sessão existe mas perfil ainda não carregou
+  if ((loading || (session && !perfil)) && !isForced) {
     return (
       <div className="p-12 flex flex-col items-center justify-center gap-4">
         <i className="fas fa-spinner fa-spin text-agro-primary text-3xl"></i>
@@ -40,8 +41,8 @@ export function RoleRoute({ allowed, children }: Props) {
     );
   }
 
-  // Se não tem perfil e não está forçado, vai para o login
-  if (!perfil && !isForced) {
+  // Sem sessão e sem perfil: vai para o login
+  if (!perfil && !isForced && !session) {
     console.warn("RoleRoute: No perfil found, redirecting to /login");
     return <Navigate to="/login" replace />;
   }

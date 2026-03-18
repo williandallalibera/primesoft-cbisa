@@ -45,7 +45,8 @@ export function LoginPage() {
       }
       return;
     }
-    navigate("/app", { replace: true });
+    // Redirecionar no próximo tick para o React aplicar session/perfil antes do AdminLayout montar
+    setTimeout(() => navigate("/app", { replace: true }), 0);
   };
 
   return (
