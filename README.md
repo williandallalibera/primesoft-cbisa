@@ -2,7 +2,7 @@
 
 Sistema de gestão e monitoramento agrícola para a CBISA (Paraguai): clientes, produtos, parcelas, zafras, propuestas, vouchers, monitoreo (siembra, aplicaciones, evaluaciones, cosecha, RTE), agente de IA y espacio del cliente.
 
-- **Frontend:** React + Vite + TypeScript + AdminLTE/Bootstrap
+- **Frontend:** React + Vite + TypeScript + Tailwind CSS + FontAwesome
 - **Backend:** Supabase (Auth, Database, Storage)
 
 ## Cómo ejecutar en local
