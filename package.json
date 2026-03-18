@@ -26,5 +26,10 @@
     "tailwindcss": "^4.2.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.8"
+  },
+  "overrides": {
+    "bootstrap-switch": {
+      "bootstrap": "4.6.2"
+    }
   }
 }
