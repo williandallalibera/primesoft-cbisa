@@ -1,14 +1,22 @@
-import { jsPDF } from "jspdf";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  createReportPdf,
+  MARGIN_X,
+  addReportImage,
+  getDefaultNotas,
+} from "../../lib/pdfReportTemplate";
 
 function formatNum(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "-";
   return Number(n).toFixed(3);
 }
 
+const PARCEL_IMAGE_MM = 28;
+
 export async function generarPdfSiembra(
   supabase: SupabaseClient,
-  siembraId: string
+  siembraId: string,
+  options?: { userName?: string }
 ): Promise<void> {
   const { data: siembra } = await supabase
     .from("siembra")
@@ -19,7 +27,7 @@ export async function generarPdfSiembra(
 
   const { data: monitoreo } = await supabase
     .from("monitoreos")
-    .select("id, id_cliente, id_parcela, id_zafra, hectares, clientes(nombre), parcelas(nombre_parcela), zafras(nombre_zafra)")
+    .select("id, id_cliente, id_parcela, id_zafra, hectares, clientes(nombre), parcelas(nombre_parcela, thumbnail_url), zafras(nombre_zafra)")
     .eq("id", (siembra as any).id_monitoreo)
     .single();
   if (!monitoreo) return;
@@ -30,35 +38,55 @@ export async function generarPdfSiembra(
     .eq("id_siembra", siembraId)
     .order("created_at", { ascending: true });
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = 18;
-
-  doc.setFontSize(14);
-  doc.setTextColor(46, 125, 50);
-  doc.text("Primesoft CBISA – Siembra", 14, y);
-  y += 8;
-
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
   const mon = monitoreo as any;
-  doc.text(`Cliente: ${mon.clientes?.nombre ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Parcela: ${mon.parcelas?.nombre_parcela ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Zafra: ${mon.zafras?.nombre_zafra ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Área (ha): ${formatNum(mon.hectares)}`, 14, y);
-  y += 5;
-  doc.text(`Fecha inicio: ${(siembra as any).fecha_inicio ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Fecha término: ${(siembra as any).fecha_termino ?? "-"}`, 14, y);
-  y += 8;
+  const { doc, startY } = await createReportPdf(supabase, {
+    title: "Siembra",
+    userName: options?.userName,
+    generalInfo: {
+      cliente: mon.clientes?.nombre ?? undefined,
+      parcela: mon.parcelas?.nombre_parcela ?? undefined,
+      zafra: mon.zafras?.nombre_zafra ?? undefined,
+    },
+  });
+  let y = startY;
 
-  const colWidths = [55, 22, 18, 22, 28];
-  const headers = ["Producto", "Cantidad", "Dosis/ha", "Costo/ha", "Importe total"];
-  doc.setFontSize(9);
+  // 2. DETALLES DE LA OPERACIÓN (imagen parcela + datos)
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  let x = 14;
+  doc.text("2. DETALLES DE LA OPERACIÓN", MARGIN_X, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+
+  const parcelThumb = mon.parcelas?.thumbnail_url;
+  const textStartX = parcelThumb ? MARGIN_X + PARCEL_IMAGE_MM + 4 : MARGIN_X;
+  if (parcelThumb) {
+    const drawn = await addReportImage(supabase, doc, parcelThumb, MARGIN_X, y, PARCEL_IMAGE_MM, PARCEL_IMAGE_MM);
+    if (drawn) {
+      doc.text(`Área Total: ${formatNum(mon.hectares)} ha`, textStartX, y + 4);
+      doc.text(`Fecha de Inicio: ${(siembra as any).fecha_inicio ?? "-"}`, textStartX, y + 9);
+      doc.text(`Fecha de Término: ${(siembra as any).fecha_termino ?? "-"}`, textStartX, y + 14);
+      y += PARCEL_IMAGE_MM + 4;
+    } else {
+      doc.text(`Área Total: ${formatNum(mon.hectares)} ha`, textStartX, y + 4);
+      doc.text(`Fecha de Inicio: ${(siembra as any).fecha_inicio ?? "-"}`, textStartX, y + 9);
+      doc.text(`Fecha de Término: ${(siembra as any).fecha_termino ?? "-"}`, textStartX, y + 14);
+      y += 20;
+    }
+  } else {
+    doc.text(`Área Total: ${formatNum(mon.hectares)} ha`, MARGIN_X, y + 4);
+    doc.text(`Fecha de Inicio: ${(siembra as any).fecha_inicio ?? "-"}`, MARGIN_X, y + 9);
+    doc.text(`Fecha de Término: ${(siembra as any).fecha_termino ?? "-"}`, MARGIN_X, y + 14);
+    y += 22;
+  }
+
+  // 3. DETALLE DE INSUMOS
+  doc.setFont("helvetica", "bold");
+  doc.text("3. DETALLE DE INSUMOS", MARGIN_X, y);
+  y += 6;
+  const colWidths = [55, 22, 18, 22, 28];
+  const headers = ["Producto", "Cantidad", "Dosis/ha", "Costo/ha", "Importe Total"];
+  doc.setFontSize(9);
+  let x = MARGIN_X;
   headers.forEach((h, i) => {
     doc.text(h.substring(0, 14), x, y);
     x += colWidths[i];
@@ -71,7 +99,7 @@ export async function generarPdfSiembra(
       doc.addPage();
       y = 20;
     }
-    x = 14;
+    x = MARGIN_X;
     const nombreProducto = it.productos?.nombre ?? "-";
     const row = [
       nombreProducto.substring(0, 28),
@@ -86,13 +114,24 @@ export async function generarPdfSiembra(
     });
     y += 5;
   });
-
   y += 6;
+
+  // 4. RESUMEN FINANCIERO (USD)
   doc.setFont("helvetica", "bold");
-  doc.text(`Costo total (USD): ${formatNum((siembra as any).costo_total)}`, 14, y);
+  doc.text("4. RESUMEN FINANCIERO (USD)", MARGIN_X, y);
   y += 5;
-  doc.text(`Costo/ha (USD): ${formatNum((siembra as any).costo_ha)}`, 14, y);
   doc.setFont("helvetica", "normal");
+  doc.text(`Costo por Hectárea: ${formatNum((siembra as any).costo_ha)}`, MARGIN_X, y);
+  y += 5;
+  doc.text(`COSTO TOTAL: ${formatNum((siembra as any).costo_total)}`, MARGIN_X, y);
+  y += 8;
+
+  // Notas
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text("Notas:", MARGIN_X, y);
+  y += 4;
+  doc.text(getDefaultNotas("Siembra"), MARGIN_X, y);
 
   const safeName = (mon.clientes?.nombre ?? "siembra").substring(0, 20).replace(/\s/g, "_");
   doc.save(`siembra_${(siembra as any).fecha_inicio ?? "sin_fecha"}_${safeName}.pdf`);

@@ -96,142 +96,169 @@ export function EspacioClientePage() {
 
   if (loading) {
     return (
-      <section className="content">
-        <div className="container-fluid">
-          <p>Cargando su espacio...</p>
-        </div>
-      </section>
+      <div className="p-6 text-center text-gray-400 italic">
+        <i className="fas fa-circle-notch fa-spin mr-2"></i>
+        Cargando su espacio...
+      </div>
     );
   }
 
   if (!clienteId) {
     return (
-      <section className="content">
-        <div className="container-fluid">
-          <div className="alert alert-info">
-            No se encontró un cliente asociado a su usuario. Contacte al administrador.
-          </div>
+      <div className="p-6">
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl flex items-center gap-3">
+          <i className="fas fa-info-circle text-blue-500"></i>
+          <span className="font-semibold">No se encontró un cliente asociado a su usuario. Contacte al administrador.</span>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="content">
-      <div className="container-fluid">
-        <div className="card">
-          <div className="card-header bg-success text-white">
-            <h3 className="card-title mb-0">Espacio del Cliente</h3>
-          </div>
-          <div className="card-body">
-            <p className="text-muted">
-              Aquí puede acompañar sus parcelas, propuestas, monitoreos y próximas visitas.
-            </p>
+    <div className="p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-agro-primary px-6 py-4">
+          <h3 className="text-lg font-bold text-white mb-0">Espacio del Cliente</h3>
+        </div>
 
-            <h5 className="mt-4 border-bottom pb-1">Parcelas</h5>
+        <div className="p-6 space-y-8">
+          <p className="text-gray-500 font-medium">
+            Aquí puede acompañar sus parcelas, propuestas, monitoreos y próximas visitas.
+          </p>
+
+          <section>
+            <h5 className="flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3 mb-4 font-bold tracking-tight">
+              <i className="fas fa-map text-agro-primary"></i>
+              Parcelas
+            </h5>
             {resumen && resumen.parcelas.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-sm table-striped">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider">
                     <tr>
-                      <th>Nombre</th>
-                      <th>Localidad</th>
-                      <th>Área real (ha)</th>
+                      <th className="px-6 py-3">Nombre</th>
+                      <th className="px-6 py-3">Localidad</th>
+                      <th className="px-6 py-3">Área real (ha)</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50">
                     {resumen.parcelas.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.nombre_parcela}</td>
-                        <td>{p.localidad ?? "-"}</td>
-                        <td>{formatDecimal(p.area_real_ha)}</td>
+                      <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-800">{p.nombre_parcela}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{p.localidad ?? "-"}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-agro-primary">{formatDecimal(p.area_real_ha)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-muted">No tiene parcelas registradas.</p>
+              <p className="text-gray-400 text-sm italic">No tiene parcelas registradas.</p>
             )}
+          </section>
 
-            <h5 className="mt-4 border-bottom pb-1">Propuestas recientes</h5>
+          <section>
+            <h5 className="flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3 mb-4 font-bold tracking-tight">
+              <i className="fas fa-file-invoice-dollar text-agro-primary"></i>
+              Propuestas Recientes
+            </h5>
             {resumen && resumen.propuestas.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-sm table-striped">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider">
                     <tr>
-                      <th>Fecha</th>
-                      <th>Tipo</th>
-                      <th>Total (USD)</th>
+                      <th className="px-6 py-3">Fecha</th>
+                      <th className="px-6 py-3">Tipo</th>
+                      <th className="px-6 py-3">Total (USD)</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50">
                     {resumen.propuestas.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.fecha}</td>
-                        <td>{p.tipo}</td>
-                        <td>{formatDecimal(p.total_general)}</td>
+                      <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-gray-500 font-medium">{p.fecha}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${p.tipo === 'Venta' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                            {p.tipo}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{formatDecimal(p.total_general)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-muted">No hay propuestas.</p>
+              <p className="text-gray-400 text-sm italic">No hay propuestas registradas.</p>
             )}
+          </section>
 
-            <h5 className="mt-4 border-bottom pb-1">Monitoreos</h5>
+          <section>
+            <h5 className="flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3 mb-4 font-bold tracking-tight">
+              <i className="fas fa-seedling text-agro-primary"></i>
+              Monitoreos
+            </h5>
             {resumen && resumen.monitoreos.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-sm table-striped">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider">
                     <tr>
-                      <th>Parcela</th>
-                      <th>Zafra</th>
-                      <th>Estado</th>
+                      <th className="px-6 py-3">Parcela</th>
+                      <th className="px-6 py-3">Zafra</th>
+                      <th className="px-6 py-3">Estado</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50">
                     {resumen.monitoreos.map((m) => (
-                      <tr key={m.id}>
-                        <td>{m.parcela_nombre}</td>
-                        <td>{m.zafra_nombre}</td>
-                        <td>{m.concluido ? "Concluido" : "En curso"}</td>
+                      <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-800">{m.parcela_nombre}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{m.zafra_nombre}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${m.concluido ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-agro-primary border border-agro-primary/10'
+                            }`}>
+                            {m.concluido ? "Concluido" : "Em Curso"}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-muted">No hay monitoreos.</p>
+              <p className="text-gray-400 text-sm italic">No hay monitoreos programados.</p>
             )}
+          </section>
 
-            <h5 className="mt-4 border-bottom pb-1">Próximas evaluaciones / visitas</h5>
+          <section>
+            <h5 className="flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3 mb-4 font-bold tracking-tight">
+              <i className="fas fa-calendar-alt text-agro-primary"></i>
+              Próximas Visitas
+            </h5>
             {resumen && resumen.evaluacionesProximas.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-sm table-striped">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider">
                     <tr>
-                      <th>Fecha próxima</th>
-                      <th>Parcela</th>
+                      <th className="px-6 py-3">Fecha Estimada</th>
+                      <th className="px-6 py-3">Parcela</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50">
                     {resumen.evaluacionesProximas.map((e, i) => (
-                      <tr key={i}>
-                        <td>{e.fecha_proxima_evaluacion}</td>
-                        <td>{e.parcela_nombre}</td>
+                      <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-bold text-orange-600">{e.fecha_proxima_evaluacion}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">{e.parcela_nombre}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-muted">No hay próximas evaluaciones programadas.</p>
+              <p className="text-gray-400 text-sm italic">No hay próximas visitas programadas.</p>
             )}
-          </div>
+          </section>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

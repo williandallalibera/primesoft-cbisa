@@ -36,8 +36,8 @@ function downloadCsv(csv: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Formato numérico con 3 decimales para USD */
+/** Formato numérico con 2 decimales para USD */
 export function formatDecimal(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
-  return Number(value).toFixed(3);
+  return Number(value).toFixed(2);
 }

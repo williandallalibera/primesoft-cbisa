@@ -31,6 +31,13 @@ Sistema de gestão e monitoramento agrícola para a CBISA (Paraguai): clientes, 
    ```
    Abrir la URL que muestre Vite (por ejemplo `http://localhost:5173`).
 
+## ¿No funcionó?
+
+- **La página en blanco o errores al cargar:** asegúrese de haber ejecutado `npm install` y de tener Node.js instalado (v18 o superior).
+- **"Configuración pendiente" en el login:** cree el archivo `.env` en la raíz del proyecto (copie `.env.example`) y complete `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los valores de su proyecto en Supabase (Project Settings > API).
+- **El login no inicia sesión:** verifique que en Supabase haya ejecutado todo el `db/schema.sql` y que exista un usuario en Authentication vinculado en la tabla `usuarios` con `perfil_acceso = 'admin'` (ver `docs/SUPABASE.md`).
+- **Puerto 5173 en uso:** Vite usará otro puerto (ej. 5174); revise la URL que aparece en la terminal.
+
 ## Deploy en Vercel
 
 1. Subir el código a un repositorio en **GitHub**.

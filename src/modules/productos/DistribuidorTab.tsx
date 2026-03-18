@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../auth/AuthContext";
 import { exportToCsv } from "./utils";
 
 interface DistribuidorRow {
@@ -24,6 +25,8 @@ const CSV_COLUMNS = [
 ];
 
 export function DistribuidorTab() {
+  const { perfil } = useAuth();
+  const isAdmin = perfil?.perfil_acceso === "admin";
   const [rows, setRows] = useState<DistribuidorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +42,18 @@ export function DistribuidorTab() {
 
   const load = async () => {
     setLoading(true);
+    const isReviewMode = localStorage.getItem("forceAuthReview") === "true";
+    if (isReviewMode) {
+      console.log("DistribuidorTab: Review Mode - Injecting mock distribuidores");
+      setRows([
+        { id: "d-1", fabricante: "Monsanto", distribuidor: "AgroDistribuidora Sul", estado: "activo", created_at: new Date().toISOString() },
+        { id: "d-2", fabricante: "Syngenta", distribuidor: "Paraná Insumos", estado: "activo", created_at: new Date(Date.now() - 86400000).toISOString() },
+        { id: "d-3", fabricante: "Bayer", distribuidor: "AgroDistribuidora Sul", estado: "inactivo", created_at: new Date(Date.now() - 86400000 * 2).toISOString() }
+      ]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("distribuidores")
       .select("id, fabricante, distribuidor, estado, created_at")
@@ -80,11 +95,13 @@ export function DistribuidorTab() {
   };
 
   const handleNuevo = () => {
+    if (!isAdmin) return;
     resetForm();
     setShowModal(true);
   };
 
   const handleEdit = (row: DistribuidorRow) => {
+    if (!isAdmin) return;
     setEditing(row);
     setForm({
       fabricante: row.fabricante,
@@ -96,6 +113,7 @@ export function DistribuidorTab() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     if (editing) {
       await supabase
@@ -115,6 +133,7 @@ export function DistribuidorTab() {
     }
     await load();
     resetForm();
+    setShowModal(false);
     setSaving(false);
   };
 
@@ -131,152 +150,145 @@ export function DistribuidorTab() {
   };
 
   if (loading) {
-    return <span>Cargando distribuidores...</span>;
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <i className="fas fa-spinner fa-spin mr-2" />Cargando distribuidores...
+      </div>
+    );
   }
 
   return (
     <div>
-      <h5 className="mb-3">Distribuidor</h5>
-      <div className="row mb-3">
-        <div className="col-md-3">
-          <label className="form-label">Estado</label>
+      {/* — Filtros — */}
+      <div className="flex flex-wrap gap-3 mb-5 items-end">
+        <div className="min-w-[140px]">
+          <label className="block text-xs font-bold text-gray-600 mb-1">Estado</label>
           <select
-            className="form-control form-control-sm"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all"
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
           >
-            {ESTADOS.map((o) => (
-              <option key={o.value || "all"} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+            {ESTADOS.map((o) => (<option key={o.value || "all"} value={o.value}>{o.label}</option>))}
           </select>
         </div>
-        <div className="col-md-4">
-          <label className="form-label">Buscar</label>
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Fabricante o distribuidor"
-            value={filterBusqueda}
-            onChange={(e) => setFilterBusqueda(e.target.value)}
-          />
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-bold text-gray-600 mb-1">Buscar</label>
+          <div className="relative">
+            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+            <input
+              type="text"
+              className="w-full pl-8 px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all"
+              placeholder="Fabricante o distribuidor..."
+              value={filterBusqueda}
+              onChange={(e) => setFilterBusqueda(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="col-md-5 d-flex align-items-end gap-2">
-          <button type="button" className="btn btn-success btn-sm" onClick={handleNuevo}>
-            <i className="fas fa-plus mr-1" />
-            Nuevo
-          </button>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleExportCsv}>
-            <i className="fas fa-download mr-1" />
-            Exportar CSV
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button type="button" className="inline-flex items-center gap-2 px-4 py-2 bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95" onClick={handleNuevo}>
+              <i className="fas fa-plus text-xs" />Nuevo
+            </button>
+          )}
+          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all" onClick={handleExportCsv}>
+            <i className="fas fa-download text-xs" />CSV
           </button>
         </div>
       </div>
-      <div className="table-responsive">
-        <table className="table table-sm table-striped table-hover">
-          <thead className="thead-dark">
-            <tr>
-              <th>Fabricante</th>
-              <th>Distribuidor</th>
-              <th>Estado</th>
-              <th>Fecha creación</th>
-              <th />
+
+      {/* — Tabla — */}
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-100">
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Fabricante</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Distribuidor</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Fecha</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {filteredRows.map((r) => (
-              <tr key={r.id} className={r.estado === "inactivo" ? "table-secondary" : ""}>
-                <td>{r.fabricante}</td>
-                <td>{r.distribuidor}</td>
-                <td>
-                  <span
-                    className={`badge ${r.estado === "activo" ? "badge-success" : "badge-secondary"}`}
-                  >
-                    {r.estado === "activo" ? "Activo" : "Inactivo"}
-                  </span>
+              <tr key={r.id} className={`hover:bg-gray-50 transition-colors ${r.estado === "inactivo" ? "opacity-60" : ""}`}>
+                <td className="px-4 py-3 font-medium text-gray-900">{r.fabricante}</td>
+                <td className="px-4 py-3 text-gray-600">{r.distribuidor}</td>
+                <td className="px-4 py-3">
+                  {r.estado === "activo"
+                    ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">Activo</span>
+                    : <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">Inactivo</span>}
                 </td>
-                <td>{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-outline-success"
-                    onClick={() => handleEdit(r)}
-                  >
-                    Editar
-                  </button>
+                <td className="px-4 py-3 text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
+                <td className="px-4 py-3 text-right">
+                  {isAdmin && (
+                    <button type="button" className="text-xs font-bold text-agro-primary hover:underline" onClick={() => handleEdit(r)}>Editar</button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {filteredRows.length === 0 && (
+          <div className="py-12 text-center text-gray-400">
+            <i className="fas fa-truck mb-2 text-2xl block" />No hay distribuidores registrados.
+          </div>
+        )}
       </div>
-      {filteredRows.length === 0 && (
-        <p className="text-muted">No hay registros.</p>
-      )}
 
-      {/* Modal */}
+      {/* — Modal — */}
       {showModal && (
-        <div className="modal d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-success text-white">
-                <h5 className="modal-title">
-                  {editing ? "Editar distribuidor" : "Nuevo distribuidor"}
-                </h5>
-                <button
-                  type="button"
-                  className="close text-white"
-                  onClick={resetForm}
-                  aria-label="Cerrar"
-                >
-                  <span aria-hidden="true">&times;</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center">
+                  <i className="fas fa-truck text-sm" />
+                </div>
+                <h3 className="font-bold text-gray-900">{editing ? "Editar distribuidor" : "Nuevo distribuidor"}</h3>
+              </div>
+              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 transition-colors"><i className="fas fa-times" /></button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Fabricante *</label>
+                  <input
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all"
+                    placeholder="Fabricante"
+                    value={form.fabricante}
+                    onChange={(e) => setForm({ ...form, fabricante: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Distribuidor *</label>
+                  <input
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all"
+                    placeholder="Distribuidor"
+                    value={form.distribuidor}
+                    onChange={(e) => setForm({ ...form, distribuidor: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Estado</label>
+                  <select
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all"
+                    value={form.estado}
+                    onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                  >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                <button type="button" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all" onClick={resetForm}>Cancelar</button>
+                <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95" disabled={saving}>
+                  {saving ? <><i className="fas fa-spinner fa-spin text-xs" />Guardando...</> : editing ? "Guardar cambios" : "Crear"}
                 </button>
               </div>
-              <form onSubmit={handleSubmit}>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Fabricante</label>
-                    <input
-                      className="form-control"
-                      placeholder="Fabricante"
-                      value={form.fabricante}
-                      onChange={(e) => setForm({ ...form, fabricante: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Distribuidor</label>
-                    <input
-                      className="form-control"
-                      placeholder="Distribuidor"
-                      value={form.distribuidor}
-                      onChange={(e) => setForm({ ...form, distribuidor: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Estado</label>
-                    <select
-                      className="form-control"
-                      value={form.estado}
-                      onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                    >
-                      <option value="activo">Activo</option>
-                      <option value="inactivo">Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn btn-success" disabled={saving}>
-                    {saving ? "Guardando..." : editing ? "Alterar" : "Crear"}
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}

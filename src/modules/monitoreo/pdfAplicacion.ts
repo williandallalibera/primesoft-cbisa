@@ -1,5 +1,5 @@
-import { jsPDF } from "jspdf";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createReportPdf, MARGIN_X, getDefaultNotas } from "../../lib/pdfReportTemplate";
 
 function formatNum(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "-";
@@ -8,7 +8,8 @@ function formatNum(n: number | null | undefined): string {
 
 export async function generarPdfAplicacion(
   supabase: SupabaseClient,
-  aplicacionId: string
+  aplicacionId: string,
+  options?: { userName?: string }
 ): Promise<void> {
   const { data: apl } = await supabase
     .from("aplicaciones")
@@ -30,36 +31,34 @@ export async function generarPdfAplicacion(
     .eq("id_aplicacion", aplicacionId)
     .order("created_at", { ascending: true });
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = 18;
-
-  doc.setFontSize(14);
-  doc.setTextColor(46, 125, 50);
-  doc.text("Primesoft CBISA – Aplicación", 14, y);
-  y += 8;
+  const mon = monitoreo as any;
+  const { doc, startY } = await createReportPdf(supabase, {
+    title: "Aplicación",
+    userName: options?.userName,
+    generalInfo: {
+      cliente: mon.clientes?.nombre ?? undefined,
+      parcela: mon.parcelas?.nombre_parcela ?? undefined,
+      zafra: mon.zafras?.nombre_zafra ?? undefined,
+    },
+  });
+  let y = startY;
 
   doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-  const mon = monitoreo as any;
-  doc.text(`Cliente: ${mon.clientes?.nombre ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Parcela: ${mon.parcelas?.nombre_parcela ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Zafra: ${mon.zafras?.nombre_zafra ?? "-"}`, 14, y);
-  y += 5;
-  doc.text(`Fecha: ${(apl as any).fecha_aplicacion ?? "-"}`, 14, y);
+  doc.text(`Fecha: ${(apl as any).fecha_aplicacion ?? "-"}`, MARGIN_X, y);
   y += 5;
   const tipoDesc = (apl as any).tipo_aplicacion?.descripcion ?? "-";
-  doc.text(`Tipo: ${tipoDesc}`, 14, y);
+  doc.text(`Tipo: ${tipoDesc}`, MARGIN_X, y);
   y += 5;
-  doc.text(`Rend. tanque/ha: ${formatNum((apl as any).rendimiento_tanque_ha)}`, 14, y);
+  doc.text(`Área (ha): ${formatNum(mon.hectares)}`, MARGIN_X, y);
+  y += 5;
+  doc.text(`Rend. tanque/ha: ${formatNum((apl as any).rendimiento_tanque_ha)}`, MARGIN_X, y);
   y += 8;
 
   const colWidths = [55, 22, 18, 22, 28];
   const headers = ["Producto", "Cantidad", "Dosis/ha", "Costo/ha", "Importe total"];
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  let x = 14;
+  let x = MARGIN_X;
   headers.forEach((h, i) => {
     doc.text(h.substring(0, 14), x, y);
     x += colWidths[i];
@@ -72,7 +71,7 @@ export async function generarPdfAplicacion(
       doc.addPage();
       y = 20;
     }
-    x = 14;
+    x = MARGIN_X;
     const nombreProducto = it.productos?.nombre ?? "-";
     const row = [
       nombreProducto.substring(0, 28),
@@ -90,10 +89,16 @@ export async function generarPdfAplicacion(
 
   y += 6;
   doc.setFont("helvetica", "bold");
-  doc.text(`Costo total (USD): ${formatNum((apl as any).costo_total)}`, 14, y);
+  doc.text(`Costo total (USD): ${formatNum((apl as any).costo_total)}`, MARGIN_X, y);
   y += 5;
-  doc.text(`Costo/ha (USD): ${formatNum((apl as any).costo_ha)}`, 14, y);
+  doc.text(`Costo/ha (USD): ${formatNum((apl as any).costo_ha)}`, MARGIN_X, y);
   doc.setFont("helvetica", "normal");
+  y += 6;
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text("Notas:", MARGIN_X, y);
+  y += 4;
+  doc.text(getDefaultNotas("Aplicación"), MARGIN_X, y);
 
   const safeName = (mon.clientes?.nombre ?? "aplicacion").substring(0, 20).replace(/\s/g, "_");
   doc.save(`aplicacion_${(apl as any).fecha_aplicacion ?? "sin_fecha"}_${safeName}.pdf`);

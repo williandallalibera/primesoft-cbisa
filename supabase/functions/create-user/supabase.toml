@@ -1,0 +1,5 @@
+[functions.create-user]
+# A função continua validando se o caller é admin via banco.
+# Este flag apenas evita 401 automáticos da plataforma em cada deploy.
+verify_jwt = false
+

@@ -1,0 +1,4 @@
+[functions.agente-ia]
+# Deixa a função pública (sem exigir JWT) em todos os deploys
+verify_jwt = false
+

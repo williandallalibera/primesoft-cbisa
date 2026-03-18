@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../auth/AuthContext";
 import { exportToCsv } from "../productos/utils";
 
 interface ZafraRow {
@@ -23,10 +24,17 @@ const CSV_COLUMNS = [
   { key: "ciclo", header: "Ciclo" },
   { key: "cultura_desc", header: "Cultura" },
   { key: "estado", header: "Estado" },
-  { key: "created_at", header: "Fecha creación" },
+  { key: "created_at", header: "Fecha criação" },
 ];
 
+const inputCls = "w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all";
+const labelCls = "block text-xs font-bold text-gray-600 mb-1";
+const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95";
+const btnSecondary = "inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all";
+
 export function ZafrasTab() {
+  const { perfil } = useAuth();
+  const isAdmin = perfil?.perfil_acceso === "admin";
   const [rows, setRows] = useState<ZafraRow[]>([]);
   const [culturas, setCulturas] = useState<{ id: string; descripcion: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,34 +51,57 @@ export function ZafrasTab() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("zafras")
-      .select("id, nombre_zafra, ciclo, id_cultura, estado, created_at")
-      .order("created_at", { ascending: false });
-    if (!error && data) {
-      const cultIds = [...new Set((data as any[]).map((d) => d.id_cultura).filter(Boolean))];
-      let cultMap: Record<string, string> = {};
-      if (cultIds.length > 0) {
-        const { data: c } = await supabase
-          .from("culturas")
-          .select("id, descripcion")
-          .in("id", cultIds);
-        if (c) cultMap = Object.fromEntries((c as any[]).map((x) => [x.id, x.descripcion]));
+    try {
+      const isReviewMode = localStorage.getItem("forceAuthReview") === "true";
+      if (isReviewMode) {
+        console.log("ZafrasTab: Review Mode - Injecting mock data");
+        setRows([
+          { id: "z-1", nombre_zafra: "Zafra 2025/2026", ciclo: 2025, id_cultura: "cl-1", cultura_desc: "Soja", estado: "activo", created_at: new Date().toISOString() },
+          { id: "z-2", nombre_zafra: "Zafriña 2025", ciclo: 2025, id_cultura: "cl-2", cultura_desc: "Maíz", estado: "activo", created_at: new Date().toISOString() }
+        ]);
+        setCulturas([
+          { id: "cl-1", descripcion: "Soja" }, { id: "cl-2", descripcion: "Maíz" }
+        ]);
+        setLoading(false);
+        return;
       }
-      setRows(
-        (data as any[]).map((d) => ({
-          id: d.id,
-          nombre_zafra: d.nombre_zafra,
-          ciclo: d.ciclo,
-          id_cultura: d.id_cultura ?? null,
-          cultura_desc: d.id_cultura ? cultMap[d.id_cultura] ?? "" : "",
-          estado: d.estado,
-          created_at: d.created_at,
-        }))
-      );
+
+      const { data, error } = await supabase
+        .from("zafras")
+        .select("id, nombre_zafra, ciclo, id_cultura, estado, created_at")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        const cultIds = [...new Set((data as any[]).map((d) => d.id_cultura).filter(Boolean))];
+        let cultMap: Record<string, string> = {};
+        if (cultIds.length > 0) {
+          const { data: c } = await supabase
+            .from("culturas")
+            .select("id, descripcion")
+            .in("id", cultIds);
+          if (c) cultMap = Object.fromEntries((c as any[]).map((x) => [x.id, x.descripcion]));
+        }
+        setRows(
+          (data as any[]).map((d) => ({
+            id: d.id,
+            nombre_zafra: d.nombre_zafra,
+            ciclo: d.ciclo,
+            id_cultura: d.id_cultura ?? null,
+            cultura_desc: d.id_cultura ? cultMap[d.id_cultura] ?? "" : "",
+            estado: d.estado,
+            created_at: d.created_at,
+          }))
+        );
+      } else if (error) {
+        console.error("Error loading zafras:", error.message);
+        setRows([]);
+      }
+      const { data: cult } = await supabase.from("culturas").select("id, descripcion");
+      if (cult) setCulturas(cult as any);
+    } catch (err) {
+      console.error("ZafrasTab load error:", err);
+      setRows([]);
     }
-    const { data: cult } = await supabase.from("culturas").select("id, descripcion");
-    if (cult) setCulturas(cult as any);
     setLoading(false);
   };
 
@@ -95,11 +126,13 @@ export function ZafrasTab() {
   };
 
   const handleNuevo = () => {
+    if (!isAdmin) return;
     resetForm();
     setShowModal(true);
   };
 
   const handleEdit = (row: ZafraRow) => {
+    if (!isAdmin) return;
     setEditing(row);
     setForm({
       nombre_zafra: row.nombre_zafra,
@@ -141,16 +174,20 @@ export function ZafrasTab() {
     );
   };
 
-  if (loading) return <span>Cargando zafras...</span>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-16 text-gray-400">
+      <i className="fas fa-spinner fa-spin mr-2" />Cargando zafras...
+    </div>
+  );
 
   return (
     <div>
-      <h5 className="mb-3">Zafras</h5>
-      <div className="row mb-3">
-        <div className="col-md-3">
-          <label className="form-label">Estado</label>
+      {/* ── Filtros ── */}
+      <div className="flex flex-wrap gap-3 mb-5 items-end">
+        <div className="min-w-[140px]">
+          <label className={labelCls}>Estado</label>
           <select
-            className="form-control form-control-sm"
+            className={inputCls}
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
           >
@@ -161,129 +198,158 @@ export function ZafrasTab() {
             ))}
           </select>
         </div>
-        <div className="col-md-9 d-flex align-items-end gap-2">
-          <button type="button" className="btn btn-success btn-sm" onClick={handleNuevo}>
-            <i className="fas fa-plus mr-1" />
-            Nuevo
-          </button>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleExportCsv}>
-            Exportar CSV
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button type="button" className={btnPrimary} onClick={handleNuevo}>
+              <i className="fas fa-plus text-xs" /> Nuevo
+            </button>
+          )}
+          <button type="button" className={btnSecondary} onClick={handleExportCsv}>
+            <i className="fas fa-download text-xs" /> Exportar CSV
           </button>
         </div>
       </div>
-      <div className="table-responsive">
-        <table className="table table-sm table-striped table-hover">
-          <thead className="thead-dark">
-            <tr>
-              <th>Nombre Zafra</th>
-              <th>Ciclo</th>
-              <th>Cultura</th>
-              <th>Estado</th>
-              <th>Fecha creación</th>
-              <th />
+
+      {/* ── Tabela ── */}
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-100">
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Nombre Zafra</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Ciclo</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Cultura</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Estado</th>
+              <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Fecha creación</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {filtered.map((r) => (
-              <tr key={r.id} className={r.estado === "inactivo" ? "table-secondary" : ""}>
-                <td>{r.nombre_zafra}</td>
-                <td>{r.ciclo ?? "-"}</td>
-                <td>{r.cultura_desc || "-"}</td>
-                <td>
-                  <span
-                    className={`badge ${r.estado === "activo" ? "badge-success" : "badge-secondary"}`}
-                  >
-                    {r.estado === "activo" ? "Activo" : "Inactivo"}
-                  </span>
+              <tr key={r.id} className={`hover:bg-gray-50 transition-colors ${r.estado === "inactivo" ? "opacity-60" : ""}`}>
+                <td className="px-4 py-3 font-medium text-gray-900">{r.nombre_zafra}</td>
+                <td className="px-4 py-3 text-gray-600">{r.ciclo ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-600">{r.cultura_desc || "—"}</td>
+                <td className="px-4 py-3">
+                  {r.estado === "activo" ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
+                      Inactivo
+                    </span>
+                  )}
                 </td>
-                <td>{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-outline-success"
-                    onClick={() => handleEdit(r)}
-                  >
-                    Editar
-                  </button>
+                <td className="px-4 py-3 text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
+                <td className="px-4 py-3 text-right">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-agro-primary hover:underline"
+                      onClick={() => handleEdit(r)}
+                    >
+                      Editar
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-gray-400">
+            <i className="fas fa-calendar-alt mb-2 text-2xl block" />
+            No hay registros.
+          </div>
+        )}
       </div>
-      {filtered.length === 0 && <p className="text-muted">No hay registros.</p>}
 
+      {/* ── Modal ── */}
       {showModal && (
-        <div className="modal d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-success text-white">
-                <h5 className="modal-title">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center">
+                  <i className="fas fa-calendar-check text-sm" />
+                </div>
+                <h3 className="font-bold text-gray-900">
                   {editing ? "Editar zafra" : "Nueva zafra"}
-                </h5>
-                <button type="button" className="close text-white" onClick={resetForm}>
-                  <span aria-hidden="true">&times;</span>
+                </h3>
+              </div>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <i className="fas fa-times" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className={labelCls}>Nombre Zafra *</label>
+                  <input
+                    className={inputCls}
+                    placeholder="Nombre de la zafra"
+                    value={form.nombre_zafra}
+                    onChange={(e) => setForm({ ...form, nombre_zafra: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Ciclo (año)</label>
+                  <input
+                    type="number"
+                    className={inputCls}
+                    placeholder="Ej: 2025"
+                    value={form.ciclo}
+                    onChange={(e) => setForm({ ...form, ciclo: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Cultura</label>
+                  <select
+                    className={inputCls}
+                    value={form.id_cultura}
+                    onChange={(e) => setForm({ ...form, id_cultura: e.target.value })}
+                  >
+                    <option value="">Seleccione</option>
+                    {culturas.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.descripcion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Estado</label>
+                  <select
+                    className={inputCls}
+                    value={form.estado}
+                    onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                  >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                <button type="button" className={btnSecondary} onClick={resetForm}>
+                  Cancelar
+                </button>
+                <button type="submit" className={btnPrimary} disabled={saving}>
+                  {saving ? (
+                    <><i className="fas fa-spinner fa-spin text-xs" /> Guardando...</>
+                  ) : editing ? (
+                    "Guardar cambios"
+                  ) : (
+                    "Crear zafra"
+                  )}
                 </button>
               </div>
-              <form onSubmit={handleSubmit}>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Nombre Zafra</label>
-                    <input
-                      className="form-control"
-                      placeholder="Nombre de la zafra"
-                      value={form.nombre_zafra}
-                      onChange={(e) => setForm({ ...form, nombre_zafra: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Ciclo (año)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      placeholder="Ej: 2025"
-                      value={form.ciclo}
-                      onChange={(e) => setForm({ ...form, ciclo: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Cultura</label>
-                    <select
-                      className="form-control"
-                      value={form.id_cultura}
-                      onChange={(e) => setForm({ ...form, id_cultura: e.target.value })}
-                    >
-                      <option value="">Seleccione</option>
-                      {culturas.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.descripcion}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Estado</label>
-                    <select
-                      className="form-control"
-                      value={form.estado}
-                      onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                    >
-                      <option value="activo">Activo</option>
-                      <option value="inactivo">Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn btn-success" disabled={saving}>
-                    {saving ? "Guardando..." : editing ? "Alterar" : "Crear"}
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}

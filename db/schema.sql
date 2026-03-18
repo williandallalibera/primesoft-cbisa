@@ -60,6 +60,7 @@ create table if not exists estado_civil (
 
 create table if not exists clientes (
   id uuid primary key default gen_random_uuid(),
+  id_versat bigint unique,
   id_usuario_auth uuid references auth.users(id),
   id_vendedor uuid references usuarios(id),
   id_tipo_persona uuid references tipo_persona(id),
@@ -197,6 +198,13 @@ create table if not exists clima_reciente (
   updated_at timestamptz default now()
 );
 
+create table if not exists fitotoxicidad (
+  id uuid primary key default gen_random_uuid(),
+  descripcion text not null unique,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- =========================
 -- Seeds para tabelas de lookup
 -- =========================
@@ -229,7 +237,8 @@ values
   ('L', 'Litro'),
   ('KG', 'Kilogramo'),
   ('ML', 'Mililitro'),
-  ('G', 'Gramo')
+  ('G', 'Gramo'),
+  ('UN', 'Unidad')
 on conflict (codigo) do nothing;
 
 insert into tipo_propuesta (codigo, descripcion)
@@ -312,6 +321,14 @@ values
   ('Temperaturas bajas'),
   ('Vientos fuertes'),
   ('Granizo reciente')
+on conflict (descripcion) do nothing;
+
+insert into fitotoxicidad (descripcion)
+values
+  ('Ninguna'),
+  ('Leve'),
+  ('Moderada'),
+  ('Severa')
 on conflict (descripcion) do nothing;
 
 -- Etapas fenológicas Soja
@@ -442,6 +459,7 @@ create table if not exists empresa (
   direccion text,
   telefono text,
   logo_url text,
+  logo_informes_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -470,6 +488,11 @@ create table if not exists integraciones (
   id uuid primary key default gen_random_uuid(),
   api_google_maps text,
   api_openai text,
+  costo_cbot_soja numeric(18,3) default 110,
+  versat_base_url text,
+  versat_empresa_id integer,
+  versat_user text,
+  versat_password text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -491,6 +514,7 @@ create index if not exists idx_distribuidores_estado on distribuidores (estado);
 
 create table if not exists productos (
   id uuid primary key default gen_random_uuid(),
+  id_versat bigint unique,
   sku text not null unique,
   id_categoria uuid references categorias_producto(id),
   nombre text not null,
@@ -499,6 +523,7 @@ create table if not exists productos (
   composicion text,
   id_unidad_medida uuid references unidades_medida(id),
   contenido_empaque numeric(18,3),
+  presentacion_txt text,
   estado text not null default 'activo',
   -- composición de precio
   precio_compra numeric(18,3),
@@ -695,6 +720,7 @@ create table if not exists aplicaciones (
   fecha_aplicacion date,
   id_tipo_aplicacion uuid references tipo_aplicacion(id),
   rendimiento_tanque_ha numeric(18,3),
+  capacidad_tanque_litros numeric(18,3),
   costo_total numeric(18,3),
   costo_ha numeric(18,3),
   created_at timestamptz default now(),
@@ -725,11 +751,12 @@ create table if not exists evaluaciones (
   id_etapa_fenologica uuid references etapas_fenologicas(id),
   id_vigor uuid references vigor(id),
   id_estres_hidrico uuid references estres_hidrico(id),
+  id_fitotoxicidad uuid references fitotoxicidad(id),
   id_clima_reciente uuid references clima_reciente(id),
   descripcion_general text,
-  img_plagas_url text,
-  img_enfermedades_url text,
-  img_malezas_url text,
+  imagen_1_url text,
+  imagen_2_url text,
+  imagen_3_url text,
   fecha_proxima_evaluacion date,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -782,6 +809,9 @@ create table if not exists rte (
   costo_total numeric(18,3),
   ingreso_total numeric(18,3),
   resultado_tecnico numeric(18,3),
+  otros_costos numeric(18,3) default 0,
+  rendimiento_actual numeric(18,3),
+  precio_venta numeric(18,3),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -815,25 +845,6 @@ create table if not exists mensajes (
 create index if not exists idx_mensajes_chat on mensajes (id_chat, created_at);
 
 -- =========================
--- RLS e helpers de autenticação
--- OBS: no Supabase, ativar RLS manualmente em cada tabela e aplicar estas políticas.
--- Aqui ficam exemplos de políticas para referencia.
-
--- Exemplo: habilitar RLS
--- alter table usuarios enable row level security;
-
--- Política: admin vê todos usuários, outros veem apenas seu próprio registro
--- create policy "usuarios_admin_all" on usuarios
---   for select using (
---     auth.uid() in (
---       select id from usuarios where perfil_acceso = 'admin' and estado = 'activo'
---     )
---   ) with check (true);
---
--- create policy "usuarios_self" on usuarios
---   for select using (id = auth.uid());
-
--- =========================
 -- Trigger: actualizar updated_at al modificar (opcional)
 -- =========================
 create or replace function actualizar_updated_at()
@@ -843,9 +854,5 @@ begin
   return new;
 end;
 $$ language plpgsql;
-
--- Ejemplo para una tabla (repetir para otras si desea):
--- alter table empresa add column if not exists updated_at timestamptz default now();
--- create trigger tr_empresa_updated before update on empresa for each row execute function actualizar_updated_at();
 
 

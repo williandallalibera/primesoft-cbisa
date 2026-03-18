@@ -1,0 +1,2 @@
+[functions.cbot-sync]
+verify_jwt = false
