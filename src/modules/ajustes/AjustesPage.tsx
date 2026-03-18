@@ -17,19 +17,19 @@ export function AjustesPage() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-agro-primary/10 rounded-xl text-agro-primary">
-          <i className="fas fa-cogs text-xl"></i>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
+        <div className="p-2.5 sm:p-3 bg-agro-primary/10 rounded-xl text-agro-primary shrink-0">
+          <i className="fas fa-cogs text-lg sm:text-xl"></i>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Ajustes del Sistema</h1>
-          <p className="text-gray-500 text-sm">Administra la configuración general y usuarios</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight truncate">Ajustes del Sistema</h1>
+          <p className="text-gray-500 text-xs sm:text-sm">Administra la configuración general y usuarios</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-8 gap-8 overflow-x-auto scrollbar-hide">
+      <div className="flex border-b border-gray-200 mb-6 sm:mb-8 gap-4 sm:gap-8 overflow-x-auto pb-px scrollbar-hide -mx-1 px-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}

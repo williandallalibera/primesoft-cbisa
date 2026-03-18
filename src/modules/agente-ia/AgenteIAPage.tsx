@@ -167,9 +167,9 @@ export function AgenteIAPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[calc(100vh-10rem)]">
-        <div className="bg-agro-primary px-6 py-4 flex justify-between items-center">
+    <div className="p-4 sm:p-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)]">
+        <div className="bg-agro-primary px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center">
           <h3 className="text-lg font-bold text-white mb-0">Agente de IA</h3>
           <button
             type="button"
@@ -180,7 +180,7 @@ export function AgenteIAPage() {
           </button>
         </div>
 
-        <div className="flex-1 p-6 flex flex-col min-h-0 bg-gray-50/50">
+        <div className="flex-1 p-4 sm:p-6 flex flex-col min-h-0 bg-gray-50/50">
           <p className="text-gray-500 text-sm mb-4 font-medium italic">
             Consulte datos del sistema (clientes, propuestas, visitas, vouchers) en lenguaje natural. Configure la clave OpenAI en Ajustes → Integraciones.
           </p>

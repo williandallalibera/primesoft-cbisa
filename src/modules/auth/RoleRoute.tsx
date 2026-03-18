@@ -21,19 +21,20 @@ export function RoleRoute({ allowed, children }: Props) {
   // Loading geral ou sessão existe mas perfil ainda não carregou
   if ((loading || (session && !perfil)) && !isForced) {
     return (
-      <div className="p-12 flex flex-col items-center justify-center gap-4">
-        <i className="fas fa-spinner fa-spin text-agro-primary text-3xl"></i>
-        <div className="text-center">
-          <p className="text-gray-900 font-bold">Cargando acceso...</p>
-          <p className="text-gray-500 text-sm">Si esto demora mucho, intenta recargar la página.</p>
+      <div className="p-6 sm:p-12 flex flex-col items-center justify-center gap-4 min-h-[200px]">
+        <i className="fas fa-spinner fa-spin text-agro-primary text-2xl sm:text-3xl"></i>
+        <div className="text-center px-2">
+          <p className="text-gray-900 font-bold text-sm sm:text-base">Cargando acceso...</p>
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">Si esto demora mucho, intenta recargar la página.</p>
         </div>
         <button
+          type="button"
           onClick={() => {
             localStorage.setItem("forceAuthReview", "true");
             (window as any).forceAuthReview = true;
             forceUpdate({});
           }}
-          className="mt-4 text-xs text-agro-primary underline hover:text-agro-secondary transition-colors"
+          className="mt-4 py-2 px-4 min-h-[44px] text-xs sm:text-sm text-agro-primary underline hover:text-agro-secondary transition-colors touch-manipulation"
         >
           Saltar verificación (Modo Revisión)
         </button>

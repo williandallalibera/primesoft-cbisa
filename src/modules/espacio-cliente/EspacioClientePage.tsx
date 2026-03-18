@@ -96,7 +96,7 @@ export function EspacioClientePage() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-400 italic">
+      <div className="p-4 sm:p-6 text-center text-gray-400 italic text-sm sm:text-base">
         <i className="fas fa-circle-notch fa-spin mr-2"></i>
         Cargando su espacio...
       </div>
@@ -105,7 +105,7 @@ export function EspacioClientePage() {
 
   if (!clienteId) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl flex items-center gap-3">
           <i className="fas fa-info-circle text-blue-500"></i>
           <span className="font-semibold">No se encontró un cliente asociado a su usuario. Contacte al administrador.</span>
@@ -115,13 +115,13 @@ export function EspacioClientePage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="bg-agro-primary px-6 py-4">
           <h3 className="text-lg font-bold text-white mb-0">Espacio del Cliente</h3>
         </div>
 
-        <div className="p-6 space-y-8">
+        <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
           <p className="text-gray-500 font-medium">
             Aquí puede acompañar sus parcelas, propuestas, monitoreos y próximas visitas.
           </p>

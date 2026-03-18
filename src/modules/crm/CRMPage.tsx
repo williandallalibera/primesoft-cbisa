@@ -21,13 +21,13 @@ export function CRMPage() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="bg-agro-primary px-6 py-4">
-          <h3 className="text-lg font-bold text-white mb-0">Gestión de Clientes y CRM</h3>
+    <div className="p-4 sm:p-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-agro-primary px-4 py-3 sm:px-6 sm:py-4">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-0">Gestión de Clientes y CRM</h3>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="border-b border-gray-100 mb-6">
             <div className="flex gap-4 overflow-x-auto pb-1">
               {tabs.map((t) => (

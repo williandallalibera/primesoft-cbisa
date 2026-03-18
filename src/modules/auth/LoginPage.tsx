@@ -50,16 +50,16 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden p-4 sm:p-6">
       {/* Background Decorativo Agro Premium */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-agro-secondary/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[30rem] h-[30rem] bg-agro-primary/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden z-10 border border-gray-100">
-        <div className="px-8 py-10">
-          <div className="text-center mb-10">
+      <div className="w-full max-w-md bg-white rounded-xl sm:rounded-2xl shadow-xl overflow-hidden z-10 border border-gray-100">
+        <div className="px-5 py-8 sm:px-8 sm:py-10">
+          <div className="text-center mb-8 sm:mb-10">
             {logoUrl ? (
               <img src={`${logoUrl}${logoUrl.includes("?") ? "&" : "?"}t=${logoUpdatedAt || ""}`} alt="Logo" className="w-16 h-16 rounded-full object-contain mx-auto mb-4 bg-gray-50 border border-gray-100" referrerPolicy="no-referrer" />
             ) : (
@@ -67,8 +67,8 @@ export function LoginPage() {
                 <i className="fas fa-leaf text-3xl"></i>
               </div>
             )}
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Primesoft CBISA</h1>
-            <p className="text-gray-500 mt-2 font-medium">Gestión y Monitoreo Agrícola</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Primesoft CBISA</h1>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base font-medium">Gestión y Monitoreo Agrícola</p>
           </div>
 
           {!isSupabaseConfigured && (
