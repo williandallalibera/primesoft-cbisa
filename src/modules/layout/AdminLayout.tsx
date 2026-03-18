@@ -36,10 +36,6 @@ export function AdminLayout() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUpdatedAt, setLogoUpdatedAt] = useState<string | null>(null);
 
-  if (!loading && !session && !perfil) {
-    return <Navigate to="/login" replace />;
-  }
-
   const fetchLogo = () => {
     if (localStorage.getItem("forceAuthReview") === "true") return;
     supabase.from("empresa").select("logo_url, updated_at").order("id", { ascending: true }).limit(1).maybeSingle().then(({ data }) => {
@@ -80,6 +76,10 @@ export function AdminLayout() {
   const filteredMenu = perfil
     ? menuItems.filter((item) => item.roles.includes(perfil.perfil_acceso))
     : menuItems;
+
+  if (!loading && !session && !perfil) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
