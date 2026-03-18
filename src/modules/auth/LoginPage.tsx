@@ -75,7 +75,11 @@ export function LoginPage() {
               <i className="fas fa-exclamation-triangle mt-0.5 text-orange-500"></i>
               <div>
                 <strong className="block font-semibold mb-1">Configuración pendiente:</strong>
-                <p>Cree un archivo <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">.env</code> en la raíz del proyecto con <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_URL</code> y <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_ANON_KEY</code>.</p>
+                {import.meta.env.PROD ? (
+                  <p>En Vercel: <strong>Project Settings → Environment Variables</strong>. Añada <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_URL</code> y <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_ANON_KEY</code> (Production y Preview), guarde y vuelva a desplegar.</p>
+                ) : (
+                  <p>Cree un archivo <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">.env</code> en la raíz del proyecto con <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_URL</code> y <code className="bg-orange-100 px-1 py-0.5 rounded text-orange-900">VITE_SUPABASE_ANON_KEY</code>.</p>
+                )}
               </div>
             </div>
           )}
