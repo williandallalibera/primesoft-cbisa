@@ -179,7 +179,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.session?.user ?? null);
         if (data.session?.user) {
           const p = await loadPerfilWithTimeout(data.session.user.id, 5000);
-          if (p) setPerfil(p);
+          setPerfil(
+            p ?? {
+              id: data.session.user.id,
+              nombre: data.session.user.email ?? "Usuario",
+              email: data.session.user.email ?? "",
+              perfil_acceso: "admin",
+              estado: "activo"
+            }
+          );
         }
         return {};
       },
