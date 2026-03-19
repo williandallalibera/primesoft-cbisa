@@ -54,8 +54,8 @@ const ESTADOS = [
 
 const inputCls = "w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all";
 const labelCls = "block text-xs font-bold text-gray-600 mb-1";
-const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95";
-const btnSecondary = "inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all";
+const btnPrimary = "inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95 touch-manipulation";
+const btnSecondary = "inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all touch-manipulation";
 
 function getPolygonSvgUrl(geom: any): string | null {
   if (!geom || geom.type !== "Polygon" || !geom.coordinates?.[0]?.length) return null;
@@ -756,11 +756,11 @@ export function ParcelasTab() {
   return (
     <div>
       {/* ── Filtros ── */}
-      <div className="flex flex-wrap gap-3 mb-5 items-end">
-        <div className="min-w-[140px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-5 items-end">
+        <div className="w-full sm:min-w-[140px]">
           <label className={labelCls}>Estado</label>
           <select
-            className={inputCls}
+            className={`${inputCls} min-h-[44px]`}
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
           >
@@ -771,10 +771,10 @@ export function ParcelasTab() {
             ))}
           </select>
         </div>
-        <div className="min-w-[180px]">
+        <div className="w-full sm:min-w-[180px]">
           <label className={labelCls}>Cliente</label>
           <select
-            className={inputCls}
+            className={`${inputCls} min-h-[44px]`}
             value={filterCliente}
             onChange={(e) => setFilterCliente(e.target.value)}
           >
@@ -786,20 +786,20 @@ export function ParcelasTab() {
             ))}
           </select>
         </div>
-        <div className="flex-1 min-w-[200px]">
+        <div className="w-full lg:flex-1 lg:min-w-[200px]">
           <label className={labelCls}>Buscar</label>
           <div className="relative">
             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
             <input
               type="text"
-              className={`${inputCls} pl-8`}
+              className={`${inputCls} pl-8 min-h-[44px]`}
               placeholder="Nombre o localidade..."
               value={filterBusqueda}
               onChange={(e) => setFilterBusqueda(e.target.value)}
             />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           <button type="button" className={btnPrimary} onClick={handleNuevo}>
             <i className="fas fa-plus text-xs" /> Nuevo
           </button>
@@ -810,8 +810,8 @@ export function ParcelasTab() {
       </div>
 
       {/* ── Tabela ── */}
-      <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-gray-100 -mx-1 px-1 sm:mx-0 sm:px-0">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Mapa</th>
@@ -854,23 +854,25 @@ export function ParcelasTab() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  {r.geom && (
+                <td className="px-3 py-3 text-right">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {r.geom && (
+                      <button
+                        type="button"
+                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors touch-manipulation"
+                        onClick={() => setViewPolygon(r)}
+                      >
+                        <i className="fas fa-eye" /> <span className="sm:inline">Ver</span>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="text-xs font-bold text-violet-500 hover:text-violet-700 hover:underline"
-                      onClick={() => setViewPolygon(r)}
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-agro-primary hover:bg-agro-primary/10 rounded-lg transition-colors touch-manipulation"
+                      onClick={() => handleEdit(r)}
                     >
-                      <i className="fas fa-eye mr-0.5" />Ver
+                      <i className="fas fa-edit" /> <span className="sm:inline">Editar</span>
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-agro-primary hover:underline"
-                    onClick={() => handleEdit(r)}
-                  >
-                    Editar
-                  </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -886,22 +888,22 @@ export function ParcelasTab() {
 
       {/* ── Modal Ver Polígono (solo lectura) ── */}
       {viewPolygon && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center shrink-0">
                   <i className="fas fa-eye text-sm" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 leading-tight text-base">Polígono de Parcela</h3>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-gray-900 leading-tight text-sm sm:text-base truncate">Polígono de Parcela</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold truncate">
                     {viewPolygon.cliente_nombre} / {viewPolygon.nombre_parcela}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setViewPolygon(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <i className="fas fa-times" />
+              <button type="button" onClick={() => setViewPolygon(null)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors touch-manipulation shrink-0">
+                <i className="fas fa-times text-lg" />
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -920,7 +922,7 @@ export function ParcelasTab() {
                 <div ref={viewMapRef} style={{ height: "400px", width: "100%", background: "#f8f9fa" }} />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0 text-right bg-gray-50 rounded-b-2xl">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex-shrink-0 text-right bg-gray-50 rounded-b-xl sm:rounded-b-2xl">
               <button type="button" className={btnSecondary} onClick={() => setViewPolygon(null)}>Cerrar</button>
             </div>
           </div>
@@ -929,24 +931,24 @@ export function ParcelasTab() {
 
       {/* ── Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center shrink-0">
                   <i className="fas fa-map-marker-alt text-sm" />
                 </div>
-                <h3 className="font-bold text-gray-900">
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">
                   {editing ? "Editar parcela" : "Nueva parcela"}
                 </h3>
               </div>
-              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <i className="fas fa-times" />
+              <button type="button" onClick={resetForm} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors touch-manipulation shrink-0">
+                <i className="fas fa-times text-lg" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-6">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
                 {!apiKey && (
                   <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex items-center gap-3">
                     <i className="fas fa-exclamation-triangle text-amber-500" />
@@ -954,8 +956,8 @@ export function ParcelasTab() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <label className={labelCls}>Cliente *</label>
                     <div className="relative">
                       <input
@@ -1036,26 +1038,26 @@ export function ParcelasTab() {
                         ref={mapRef}
                         style={{ height: "400px", width: "100%", background: "#f8f9fa" }}
                       />
-                      <div className="absolute top-3 left-3 flex gap-2">
-                        <button type="button" className={`px-3 py-1.5 bg-white shadow-md rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border border-gray-100 transition-all ${historyState.step >= 0 ? "text-gray-700" : "text-gray-300 cursor-not-allowed"}`} onClick={handleUndo} disabled={historyState.step < 0}>
+                      <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-2 z-10">
+                        <button type="button" className={`min-h-[44px] px-3 py-2 bg-white shadow-md rounded-xl text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border border-gray-100 transition-all touch-manipulation ${historyState.step >= 0 ? "text-gray-700" : "text-gray-300 cursor-not-allowed"}`} onClick={handleUndo} disabled={historyState.step < 0}>
                           <i className="fas fa-undo" /> Deshacer
                         </button>
-                        <button type="button" className={`px-3 py-1.5 bg-white shadow-md rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border border-gray-100 transition-all ${historyState.step < historyState.list.length - 1 ? "text-gray-700" : "text-gray-300 cursor-not-allowed"}`} onClick={handleRedo} disabled={historyState.step >= historyState.list.length - 1}>
+                        <button type="button" className={`min-h-[44px] px-3 py-2 bg-white shadow-md rounded-xl text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border border-gray-100 transition-all touch-manipulation ${historyState.step < historyState.list.length - 1 ? "text-gray-700" : "text-gray-300 cursor-not-allowed"}`} onClick={handleRedo} disabled={historyState.step >= historyState.list.length - 1}>
                           <i className="fas fa-redo" /> Rehacer
                         </button>
                         <button
                           type="button"
-                          className={`px-3 py-1.5 bg-white shadow-md rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100 ${geoLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                          className={`min-h-[44px] px-3 py-2 bg-white shadow-md rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100 touch-manipulation ${geoLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                           onClick={miraMap}
                           disabled={geoLoading}
                         >
                           {geoLoading ? <i className="fas fa-spinner fa-spin text-agro-primary" /> : <i className="fas fa-location-arrow text-agro-primary" />}
-                          {geoLoading ? " Localizando..." : " Mi ubicación"}
+                          <span className="whitespace-nowrap">{geoLoading ? " Localizando..." : " Mi ubicación"}</span>
                         </button>
-                        <button type="button" className="px-3 py-1.5 bg-white shadow-md rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100" onClick={centerOnParaguay}>
-                          <i className="fas fa-map-marker-alt text-agro-primary" /> Centrar en Paraguay
+                        <button type="button" className="min-h-[44px] px-3 py-2 bg-white shadow-md rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100 touch-manipulation whitespace-nowrap" onClick={centerOnParaguay}>
+                          <i className="fas fa-map-marker-alt text-agro-primary" /> Centrar Paraguay
                         </button>
-                        <button type="button" className="px-3 py-1.5 bg-white shadow-md rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100" onClick={handleManualClear}>
+                        <button type="button" className="min-h-[44px] px-3 py-2 bg-white shadow-md rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-100 touch-manipulation" onClick={handleManualClear}>
                           <i className="fas fa-trash-alt text-red-500" /> Limpiar
                         </button>
                       </div>
@@ -1063,7 +1065,7 @@ export function ParcelasTab() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className={labelCls}>Área prevista (ha)</label>
                     <input
@@ -1100,7 +1102,7 @@ export function ParcelasTab() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 flex-shrink-0">
                 <button type="button" className={btnSecondary} onClick={resetForm}>Cancelar</button>
                 <button type="submit" className={btnPrimary} disabled={saving}>
                   {saving ? (

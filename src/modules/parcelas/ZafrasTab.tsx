@@ -29,8 +29,8 @@ const CSV_COLUMNS = [
 
 const inputCls = "w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:border-agro-primary focus:ring-2 focus:ring-agro-primary/20 outline-none transition-all";
 const labelCls = "block text-xs font-bold text-gray-600 mb-1";
-const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95";
-const btnSecondary = "inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all";
+const btnPrimary = "inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] bg-agro-primary text-white text-sm font-bold rounded-xl shadow shadow-agro-primary/20 hover:opacity-90 transition-all active:scale-95 touch-manipulation";
+const btnSecondary = "inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] border border-gray-200 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-50 transition-all touch-manipulation";
 
 export function ZafrasTab() {
   const { perfil } = useAuth();
@@ -183,11 +183,11 @@ export function ZafrasTab() {
   return (
     <div>
       {/* ── Filtros ── */}
-      <div className="flex flex-wrap gap-3 mb-5 items-end">
-        <div className="min-w-[140px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-5 items-end">
+        <div className="w-full sm:min-w-[140px]">
           <label className={labelCls}>Estado</label>
           <select
-            className={inputCls}
+            className={`${inputCls} min-h-[44px]`}
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
           >
@@ -198,7 +198,7 @@ export function ZafrasTab() {
             ))}
           </select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           {isAdmin && (
             <button type="button" className={btnPrimary} onClick={handleNuevo}>
               <i className="fas fa-plus text-xs" /> Nuevo
@@ -211,8 +211,8 @@ export function ZafrasTab() {
       </div>
 
       {/* ── Tabela ── */}
-      <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-gray-100 -mx-1 px-1 sm:mx-0 sm:px-0">
+        <table className="w-full text-sm min-w-[480px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="text-left px-4 py-3 font-bold text-gray-600 text-xs uppercase tracking-wide">Nombre Zafra</th>
@@ -241,14 +241,14 @@ export function ZafrasTab() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString("es-PY")}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-3 py-3 text-right">
                   {isAdmin && (
                     <button
                       type="button"
-                      className="text-xs font-bold text-agro-primary hover:underline"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-agro-primary hover:bg-agro-primary/10 rounded-lg transition-colors touch-manipulation"
                       onClick={() => handleEdit(r)}
                     >
-                      Editar
+                      <i className="fas fa-edit" /> <span className="sm:inline">Editar</span>
                     </button>
                   )}
                 </td>
@@ -266,31 +266,32 @@ export function ZafrasTab() {
 
       {/* ── Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 bg-agro-primary/10 text-agro-primary rounded-lg flex items-center justify-center shrink-0">
                   <i className="fas fa-calendar-check text-sm" />
                 </div>
-                <h3 className="font-bold text-gray-900">
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">
                   {editing ? "Editar zafra" : "Nueva zafra"}
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={resetForm}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors touch-manipulation shrink-0"
               >
-                <i className="fas fa-times" />
+                <i className="fas fa-times text-lg" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div>
                   <label className={labelCls}>Nombre Zafra *</label>
                   <input
-                    className={inputCls}
+                    className={`${inputCls} min-h-[44px]`}
                     placeholder="Nombre de la zafra"
                     value={form.nombre_zafra}
                     onChange={(e) => setForm({ ...form, nombre_zafra: e.target.value })}
@@ -301,7 +302,7 @@ export function ZafrasTab() {
                   <label className={labelCls}>Ciclo (año)</label>
                   <input
                     type="number"
-                    className={inputCls}
+                    className={`${inputCls} min-h-[44px]`}
                     placeholder="Ej: 2025"
                     value={form.ciclo}
                     onChange={(e) => setForm({ ...form, ciclo: e.target.value })}
@@ -310,7 +311,7 @@ export function ZafrasTab() {
                 <div>
                   <label className={labelCls}>Cultura</label>
                   <select
-                    className={inputCls}
+                    className={`${inputCls} min-h-[44px]`}
                     value={form.id_cultura}
                     onChange={(e) => setForm({ ...form, id_cultura: e.target.value })}
                   >
@@ -325,7 +326,7 @@ export function ZafrasTab() {
                 <div>
                   <label className={labelCls}>Estado</label>
                   <select
-                    className={inputCls}
+                    className={`${inputCls} min-h-[44px]`}
                     value={form.estado}
                     onChange={(e) => setForm({ ...form, estado: e.target.value })}
                   >
@@ -335,7 +336,7 @@ export function ZafrasTab() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-gray-100">
                 <button type="button" className={btnSecondary} onClick={resetForm}>
                   Cancelar
                 </button>
